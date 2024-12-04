@@ -1,7 +1,6 @@
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import re
 from langdetect import detect, DetectorFactory
 from langdetect.lang_detect_exception import LangDetectException
 import pycountry
