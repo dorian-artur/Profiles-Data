@@ -105,21 +105,21 @@ def detect_language(description, headline, location):
     return "en"
 
 # Aplicar la detección de idioma
-data['language'] = data.apply(
+'''data['language'] = data.apply(
     lambda row: detect_language(row['description'], row['headline'], row['location']),
     axis=1
-)
+)'''
 
 # Verificar los datos después de la detección de idioma
 print("Données après la détection de la langue :")
-print(data.head())
+#print(data.head())
 
 # Acceder a la hoja 2 (index 1) para escribir los datos limpiados
 worksheet2 = sheet.get_worksheet(1)
 worksheet2.clear()
 
 # Escribir los datos en la hoja 2
-worksheet2.update([data.columns.values.tolist()] + data.values.tolist())
+#worksheet2.update([data.columns.values.tolist()] + data.values.tolist())
 
 print("Les données avec détection de langue ont été copiées et nettoyées avec succès dans la Feuille 2.")
 
