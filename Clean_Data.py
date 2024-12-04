@@ -15,7 +15,7 @@ app = Flask(__name__)
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 
 # Fixer la graine pour des résultats cohérents dans langdetect
-DetectorFactory.seed = 0
+#DetectorFactory.seed = 0
 
 google_credentials_json = os.getenv('GOOGLE_CREDENTIALS')
 
