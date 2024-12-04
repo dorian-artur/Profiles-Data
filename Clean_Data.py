@@ -44,10 +44,11 @@ print(data.head())  # Imprimir las primeras filas para verificación
 
 # Columnas requeridas para filtrar
 required_columns = [
-    "firstName", "lastName", "fullName", "email", "mail", "phoneNumber", "linkedinProfile", "description", 
-    "headline", "location", "company", "jobTitle", "jobDescription", "jobLocation", "company2", 
-    "jobTitle2", "jobDescription2", "baseUrl", "professionalEmail"
-]
+    "Profile Url", "Full Name", "First Name", "Last Name", "Job Title", "Additional Info", 
+    "Location", "Company", "Company Url", "Industry", "Company 2", "Company Url 2", 
+    "Job Date Range", "Job Title 2", "Job Date Range 2", "School", "School Degree",
+    "School Date Range", "School 2", "School Degree 2", "School Date Range 2"]
+
 data = data[required_columns]
 
 # Diccionario de reemplazo para corregir errores comunes de codificación
