@@ -10,7 +10,7 @@ import requests
 from io import BytesIO
 
 
-APP=Flask(__NAME__)
+APP=Flask(__name__)
 @APP.route("/")
 def home():
     return("app server is running")
