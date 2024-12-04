@@ -8,6 +8,8 @@ import langcodes
 from flask import Flask, request, jsonify
 import requests
 from io import BytesIO
+import os
+import json
 
 
 APP=Flask(__name__)
@@ -17,10 +19,21 @@ def home():
 # Fixer la graine pour des résultats cohérents dans langdetect
 DetectorFactory.seed = 0
 
+google_credentials_json = os.getenv('GOOGLE_CREDENTIALS')
+
+if google_credentials_json:
+    # Cargar las credenciales desde el JSON que se obtiene de la variable de entorno
+    creds_dict = json.loads(google_credentials_json)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    client = gspread.authorize(creds)
+else:
+    print("No se encontraron las credenciales de Google en la variable de entorno.")
+
+
 # Authentification avec Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name('js/cleandatalinkedin-db3b9e69269b.json', scope)
-client = gspread.authorize(creds)
+##creds = ServiceAccountCredentials.from_json_keyfile_name('js/cleandatalinkedin-db3b9e69269b.json', scope)
+
 
 # Ouvrir la feuille de calcul partagée en utilisant l'URL
 sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/1klDIZ9ZBhmiUZ_FwS0DejKOl8iRph6ewW4C6JAUJ598/edit?usp=sharing")
