@@ -30,6 +30,26 @@ else:
 @app.route("/")
 def home():
     return("app server is running")
+@app.route("/clean", methods=["POST"])
+def cleaning():
+    # Leer los datos de la hoja de cálculo
+    data = pd.DataFrame(worksheet1.get_all_records())
+
+    # Verificar el cargado de los datos
+    print("Données originales chargées :")
+    print(data.head())  # Imprimir las primeras filas para verificación
+
+    # Limpiar las columnas excepto las especiales
+    for column in required_columns:
+        if column not in special_columns:
+            data[column] = data[column].apply(clean_text)
+
+    # Escribir los datos limpios en la hoja 2
+    worksheet2.clear()
+    worksheet2.update([data.columns.values.tolist()] + data.values.tolist())
+
+    # Mensaje de éxito
+    return jsonify({"message": "Los datos han sido limpiados y actualizados en la hoja 2 con éxito."}), 200
 
 # Abre la hoja de cálculo usando la URL
 sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/1klDIZ9ZBhmiUZ_FwS0DejKOl8iRph6ewW4C6JAUJ598/edit?usp=sharing")
