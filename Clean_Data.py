@@ -1,21 +1,19 @@
-import pandas as pd
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from langdetect import detect, DetectorFactory
-from langdetect.lang_detect_exception import LangDetectException
-import pycountry
-import langcodes
-from flask import Flask, request, jsonify
-import requests
-from io import BytesIO
 import os
 import json
+import gspread
+import pandas as pd
+import pycountry
+import langcodes
+import re
+from langdetect import detect, LangDetectException
+from oauth2client.service_account import ServiceAccountCredentials
+from flask import Flask
 
+app = Flask(__name__)
 
-APP=Flask(__name__)
-@APP.route("/")
-def home():
-    return("app server is running")
+# Definir el alcance de las credenciales
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+
 # Fixer la graine pour des résultats cohérents dans langdetect
 DetectorFactory.seed = 0
 
@@ -29,24 +27,22 @@ if google_credentials_json:
 else:
     print("No se encontraron las credenciales de Google en la variable de entorno.")
 
+@app.route("/")
+def home():
+    return("app server is running")
 
-# Authentification avec Google Sheets
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-##creds = ServiceAccountCredentials.from_json_keyfile_name('js/cleandatalinkedin-db3b9e69269b.json', scope)
-
-
-# Ouvrir la feuille de calcul partagée en utilisant l'URL
+# Abre la hoja de cálculo usando la URL
 sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/1klDIZ9ZBhmiUZ_FwS0DejKOl8iRph6ewW4C6JAUJ598/edit?usp=sharing")
 
-# Accéder à la Feuille 1 (index 0) pour lire les données originales
+# Acceder a la hoja 1 (index 0) para leer los datos originales
 worksheet1 = sheet.get_worksheet(0)
 data = pd.DataFrame(worksheet1.get_all_records())
 
-# Vérifier le chargement des données
+# Verificar el cargado de los datos
 print("Données originales chargées :")
-print(data.head())  # Imprimer les premières lignes pour vérification
+print(data.head())  # Imprimir las primeras filas para verificación
 
-# Colonnes requises à filtrer
+# Columnas requeridas para filtrar
 required_columns = [
     "firstName", "lastName", "fullName", "email", "mail", "phoneNumber", "linkedinProfile", "description", 
     "headline", "location", "company", "jobTitle", "jobDescription", "jobLocation", "company2", 
@@ -54,7 +50,7 @@ required_columns = [
 ]
 data = data[required_columns]
 
-# Dictionnaire de remplacement pour corriger les erreurs courantes d'encodage
+# Diccionario de reemplazo para corregir errores comunes de codificación
 replacement_dict = {
     "Ã¡": "á", "Ã©": "é", "Ã­": "í", "Ã³": "ó", "Ãº": "ú",
     "Ã±": "ñ", "Ã": "Ñ", "â": "'", "â": "-", "Ã¼": "ü",
@@ -62,28 +58,28 @@ replacement_dict = {
     "â„¢": "™", "âˆ’": "-", "Â": ""
 }
 
-# Colonnes spéciales où aucune suppression de caractères spéciaux n'est appliquée
+# Columnas especiales donde no se aplica eliminación de caracteres especiales
 special_columns = {"email", "mail", "linkedinProfile", "baseUrl", "professionalEmail"}
 
-# Fonction pour nettoyer le texte dans les colonnes non spéciales
+# Función para limpiar el texto en las columnas no especiales
 def clean_text(text):
     if pd.isna(text):
         return ""
-    text = str(text)  # Convertir en chaîne pour traiter les valeurs non textuelles
+    text = str(text)  # Convertir en cadena para manejar valores no textuales
     for bad, good in replacement_dict.items():
         text = text.replace(bad, good)
     return re.sub(r'[^\w\s-]', '', text).strip()
 
-# Appliquer le nettoyage seulement aux colonnes qui ne sont pas dans `special_columns`
+# Limpiar las columnas excepto las especiales
 for column in required_columns:
     if column not in special_columns:
         data[column] = data[column].apply(clean_text)
 
-# Vérifier les données après le nettoyage
+# Verificar las columnas después de limpiar
 print("Données après le nettoyage :")
 print(data.head())
 
-# Fonction pour obtenir la langue par défaut d'un pays en utilisant pycountry et langcodes
+# Función para obtener el idioma predeterminado de un país usando pycountry y langcodes
 def get_language_from_country(country_name):
     try:
         country = pycountry.countries.lookup(country_name)
@@ -92,7 +88,7 @@ def get_language_from_country(country_name):
     except LookupError:
         return None
 
-# Fonction pour détecter la langue en fonction du texte ou du pays
+# Función para detectar el idioma basado en el texto o el país
 def detect_language(description, headline, location):
     for text in [description, headline]:
         if text:
@@ -107,24 +103,25 @@ def detect_language(description, headline, location):
                 return lang
     return "en"
 
-# Appliquer la détection de la langue
+# Aplicar la detección de idioma
 data['language'] = data.apply(
     lambda row: detect_language(row['description'], row['headline'], row['location']),
     axis=1
 )
 
-# Vérifier les données après la détection de la langue
+# Verificar los datos después de la detección de idioma
 print("Données après la détection de la langue :")
 print(data.head())
 
-# Accéder à la Feuille 2 (index 1) pour écrire les données nettoyées
+# Acceder a la hoja 2 (index 1) para escribir los datos limpiados
 worksheet2 = sheet.get_worksheet(1)
 worksheet2.clear()
 
-# Écrire les données dans la Feuille 2
+# Escribir los datos en la hoja 2
 worksheet2.update([data.columns.values.tolist()] + data.values.tolist())
 
 print("Les données avec détection de langue ont été copiées et nettoyées avec succès dans la Feuille 2.")
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
+
