@@ -6,7 +6,15 @@ from langdetect import detect, DetectorFactory
 from langdetect.lang_detect_exception import LangDetectException
 import pycountry
 import langcodes
+from flask import Flask, request, jsonify
+import requests
+from io import BytesIO
 
+
+APP=FLASK(__NAME__)
+@APP.route("/")
+def home():
+    return("app server is running")
 # Fixer la graine pour des résultats cohérents dans langdetect
 DetectorFactory.seed = 0
 
@@ -105,3 +113,6 @@ worksheet2.clear()
 worksheet2.update([data.columns.values.tolist()] + data.values.tolist())
 
 print("Les données avec détection de langue ont été copiées et nettoyées avec succès dans la Feuille 2.")
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
