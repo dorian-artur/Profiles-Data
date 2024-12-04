@@ -115,7 +115,7 @@ print("Données après la détection de la langue :")
 #print(data.head())
 
 # Acceder a la hoja 2 (index 1) para escribir los datos limpiados
-worksheet2 = worksheet2 = sheet.worksheet('Data_Search')
+worksheet2 =  sheet.worksheet('Sheet6')
 worksheet2.clear()
 
 # Escribir los datos en la hoja 2
