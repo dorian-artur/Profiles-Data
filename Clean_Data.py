@@ -52,7 +52,8 @@ def cleaning():
     return jsonify({"message": "Los datos han sido limpiados y actualizados en la hoja 2 con éxito."}), 200
 
 # Abre la hoja de cálculo usando la URL
-sheet = client.open_by_url(client.open_by_url("os.getenv('sheetData')"))
+sheet_url = os.getenv('sheetData')
+sheet = client.open_by_url(sheet_url)
 
 # Acceder a la hoja 1 (index 0) para leer los datos originales
 worksheet1 = sheet.get_worksheet(0)
