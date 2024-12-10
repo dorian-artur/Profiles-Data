@@ -11,18 +11,18 @@ from flask import Flask
 
 app = Flask(__name__)
 
-# Definir el alcance de las credenciales
+# Define the scope for the credentials
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 
 google_credentials_json = os.getenv('GOOGLE_CREDENTIALS')
 
 if google_credentials_json:
-    # Cargar las credenciales desde el JSON que se obtiene de la variable de entorno
+    # Load the credentials from the JSON obtained from the environment variable
     creds_dict = json.loads(google_credentials_json)
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
 else:
-    print("No se encontraron las credenciales de Google en la variable de entorno.")
+    print("Google credentials not found in the environment variable.")
 
 @app.route("/")
 def home():
@@ -30,43 +30,49 @@ def home():
 
 @app.route("/clean", methods=["POST"])
 def cleaning():
-    # Leer los datos de la hoja de cálculo
+    # Read the data from the spreadsheet
     data = pd.DataFrame(worksheet1.get_all_records())
 
-    # Verificar el cargado de los datos
-    print("Données originales chargées :")
-    print(data.head())  # Imprimir las primeras filas para verificación
+    # Verify data loading
+    print("Original data loaded:")
+    print(data.head())  # Print the first rows for verification
 
-    # Limpiar las columnas excepto las especiales
+    # Clean the columns except for the special ones
     for column in required_columns:
         if column not in special_columns:
             data[column] = data[column].apply(clean_text)
 
-    # Obtener la última fila de la hoja destino antes de escribir
-    last_row = len(worksheet2.get_all_values())
+    # Get the last row with data in the destination sheet (worksheet2)
+    existing_data = worksheet2.get_all_values()
+    last_row = len(existing_data)
 
-    # Añadir una columna de "Row Number" para saber la línea de cada fila en la hoja
+    # If it's the first insertion (only a header row), insert the header as well
+    if last_row == 0:
+        worksheet2.append_rows([data.columns.values.tolist()], value_input_option='RAW')
+        last_row = 1  # The header occupies the first row
+
+    # Add a "Row Number" column that starts at the correct row
     data["Row Number"] = range(last_row + 1, last_row + len(data) + 1)
 
-    # Escribir los datos limpios en la hoja 2 (añadiendo al final)
-    worksheet2.append_rows([data.columns.values.tolist()] + data.values.tolist(), value_input_option='RAW')
+    # Write the cleaned data to sheet 2 (appending to the end) without the header
+    worksheet2.append_rows(data.values.tolist(), value_input_option='RAW')
 
-    # Mensaje de éxito
-    return jsonify({"message": "Los datos han sido limpiados y añadidos al final de la hoja 2 con éxito."}), 200
+    # Success message
+    return jsonify({"message": "The data has been cleaned and successfully added to the end of sheet 2."}), 200
 
-# Abre la hoja de cálculo usando la URL
+# Open the spreadsheet using the URL
 sheet_url = os.getenv('sheetData')
 sheet = client.open_by_url(sheet_url)
 
-# Acceder a la hoja 1 (index 0) para leer los datos originales
+# Access sheet 1 (index 0) to read the original data
 worksheet1 = sheet.get_worksheet(0)
 data = pd.DataFrame(worksheet1.get_all_records())
 
-# Verificar el cargado de los datos
-print("Données originales chargées :")
-print(data.head())  # Imprimir las primeras filas para verificación
+# Verify data loading
+print("Original data loaded:")
+print(data.head())  # Print the first rows for verification
 
-# Columnas requeridas para filtrar
+# Required columns for filtering
 required_columns = [
     "Profile Url", "Full Name", "First Name", "Last Name", "Job Title", "Additional Info", 
     "Location", "Company", "Company Url", "Industry", "Company 2", "Company Url 2", 
@@ -75,7 +81,7 @@ required_columns = [
 
 data = data[required_columns]
 
-# Diccionario de reemplazo para corregir errores comunes de codificación
+# Replacement dictionary to fix common encoding errors
 replacement_dict = {
     "Ã¡": "á", "Ã©": "é", "Ã­": "í", "Ã³": "ó", "Ãº": "ú",
     "Ã±": "ñ", "Ã": "Ñ", "â": "'", "â": "-", "Ã¼": "ü",
@@ -83,29 +89,29 @@ replacement_dict = {
     "â„¢": "™", "âˆ’": "-", "Â": ""
 }
 
-# Columnas especiales donde no se aplica eliminación de caracteres especiales
+# Special columns where special character removal is not applied
 special_columns = {"email", "mail", "linkedinProfile", "baseUrl", "professionalEmail"}
 
-# Función para limpiar el texto en las columnas no especiales
+# Function to clean text in non-special columns
 def clean_text(text):
     if pd.isna(text):
         return ""
-    text = str(text)  # Convertir en cadena para manejar valores no textuales
+    text = str(text)  # Convert to string to handle non-text values
     for bad, good in replacement_dict.items():
         text = text.replace(bad, good)
     return re.sub(r'[^\w\s-]', '', text).strip()
 
-# Limpiar las columnas excepto las especiales
+# Clean the columns except for the special ones
 for column in required_columns:
     if column not in special_columns:
         data[column] = data[column].apply(clean_text)
 
-# Verificar las columnas después de limpiar
-print("Données après le nettoyage :")
+# Verify the columns after cleaning
+print("Data after cleaning:")
 print(data.head())
 
-# Acceder a la hoja 2 (index 1) para escribir los datos limpiados
-worksheet2 =  sheet.worksheet('Sheet6')
+# Access sheet 2 (index 1) to write the cleaned data
+worksheet2 = sheet.worksheet('Sheet6')
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
