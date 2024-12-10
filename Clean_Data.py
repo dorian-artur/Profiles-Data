@@ -14,9 +14,6 @@ app = Flask(__name__)
 # Definir el alcance de las credenciales
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 
-# Fixer la graine pour des résultats cohérents dans langdetect
-#DetectorFactory.seed = 0
-
 google_credentials_json = os.getenv('GOOGLE_CREDENTIALS')
 
 if google_credentials_json:
@@ -30,6 +27,7 @@ else:
 @app.route("/")
 def home():
     return("app server is running")
+
 @app.route("/clean", methods=["POST"])
 def cleaning():
     # Leer los datos de la hoja de cálculo
@@ -44,12 +42,17 @@ def cleaning():
         if column not in special_columns:
             data[column] = data[column].apply(clean_text)
 
-    # Escribir los datos limpios en la hoja 2
-    worksheet2.clear()
-    worksheet2.update([data.columns.values.tolist()] + data.values.tolist())
+    # Obtener la última fila de la hoja destino antes de escribir
+    last_row = len(worksheet2.get_all_values())
+
+    # Añadir una columna de "Row Number" para saber la línea de cada fila en la hoja
+    data["Row Number"] = range(last_row + 1, last_row + len(data) + 1)
+
+    # Escribir los datos limpios en la hoja 2 (añadiendo al final)
+    worksheet2.append_rows([data.columns.values.tolist()] + data.values.tolist(), value_input_option='RAW')
 
     # Mensaje de éxito
-    return jsonify({"message": "Los datos han sido limpiados y actualizados en la hoja 2 con éxito."}), 200
+    return jsonify({"message": "Los datos han sido limpiados y añadidos al final de la hoja 2 con éxito."}), 200
 
 # Abre la hoja de cálculo usando la URL
 sheet_url = os.getenv('sheetData')
@@ -101,48 +104,8 @@ for column in required_columns:
 print("Données après le nettoyage :")
 print(data.head())
 
-# Función para obtener el idioma predeterminado de un país usando pycountry y langcodes
-def get_language_from_country(country_name):
-    try:
-        country = pycountry.countries.lookup(country_name)
-        language = langcodes.standardize_tag(langcodes.Language.get(country.alpha_2).language)
-        return language
-    except LookupError:
-        return None
-
-# Función para detectar el idioma basado en el texto o el país
-def detect_language(description, headline, location):
-    for text in [description, headline]:
-        if text:
-            try:
-                return detect(text)
-            except LangDetectException:
-                continue
-    for country in pycountry.countries:
-        if country.name.lower() in location.lower():
-            lang = get_language_from_country(country.name)
-            if lang:
-                return lang
-    return "en"
-
-# Aplicar la detección de idioma
-'''data['language'] = data.apply(
-    lambda row: detect_language(row['description'], row['headline'], row['location']),
-    axis=1
-)'''
-
-# Verificar los datos después de la detección de idioma
-print("Données après la détection de la langue :")
-#print(data.head())
-
 # Acceder a la hoja 2 (index 1) para escribir los datos limpiados
 worksheet2 =  sheet.worksheet('Sheet6')
-worksheet2.clear()
-
-# Escribir los datos en la hoja 2
-#worksheet2.update([data.columns.values.tolist()] + data.values.tolist())
-
-print("Les données avec détection de langue ont été copiées et nettoyées avec succès dans la Feuille 2.")
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
